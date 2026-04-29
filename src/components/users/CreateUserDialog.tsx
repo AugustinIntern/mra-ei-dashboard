@@ -44,7 +44,7 @@ const formSchema = z.object({
   ebsId: z.string().min(1, "EBS ID is required"),
   userName: z.string().min(1, "MRA Username is required"),
   password: z.string().min(1, "MRA Password is required"),
-  areaCode: z.coerce.number({ invalid_type_error: "Area code must be a number" }).min(1, "Area Code is required"),
+  areaCode: z.coerce.number().min(1, "Area Code is required"),
 });
 
 type FormValues = z.infer<typeof formSchema>;
