@@ -1,5 +1,7 @@
 "use client";
 
+/** File: UI/application module for the dashboard project. */
+
 import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -63,7 +65,7 @@ export function CreateUserDialog({ onSuccess }: CreateUserDialogProps) {
   const [copied, setCopied] = useState(false);
 
   const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema) as any,
+    resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
       ebsId: "",

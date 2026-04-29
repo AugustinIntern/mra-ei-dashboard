@@ -1,3 +1,4 @@
+/** File: UI/application module for the dashboard project. */
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 

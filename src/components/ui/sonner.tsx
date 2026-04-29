@@ -1,4 +1,6 @@
-"use client"
+"use client";
+
+/** File: UI/application module for the dashboard project. */
 
 import { useTheme } from "next-themes"
 import { Toaster as Sonner, type ToasterProps } from "sonner"

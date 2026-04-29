@@ -1,5 +1,7 @@
 "use client";
 
+/** File: UI/application module for the dashboard project. */
+
 import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -13,6 +15,8 @@ const navItems = [
   { name: "Users", href: "/dashboard/users" },
   { name: "Logs", href: "/dashboard/logs" },
 ];
+
+const appName = process.env.NEXT_PUBLIC_APP_NAME || "App";
 
 export function NavBar() {
   const pathname = usePathname();
@@ -35,7 +39,7 @@ export function NavBar() {
             >
               <path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3" />
             </svg>
-            <span className="font-bold sm:inline-block">eInv Dashboard</span>
+            <span className="font-bold sm:inline-block">{appName}</span>
           </Link>
           <nav className="flex items-center space-x-6 text-sm font-medium">
             {navItems.map((item) => (
@@ -80,7 +84,7 @@ export function NavBar() {
                 >
                   <path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3" />
                 </svg>
-                <span className="font-bold">eInv Dashboard</span>
+                <span className="font-bold">{appName}</span>
               </Link>
             </div>
             <div className="flex flex-col space-y-4 px-2 mt-8">
@@ -104,7 +108,7 @@ export function NavBar() {
         {/* Mobile title */}
         <div className="flex flex-1 items-center justify-between space-x-2 md:justify-end">
           <div className="w-full flex-1 md:w-auto md:flex-none">
-             <span className="font-bold md:hidden text-primary">eInv Dashboard</span>
+             <span className="font-bold md:hidden text-primary">{appName}</span>
           </div>
         </div>
       </div>

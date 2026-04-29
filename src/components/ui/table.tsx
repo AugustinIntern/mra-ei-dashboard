@@ -1,3 +1,4 @@
+/** File: UI/application module for the dashboard project. */
 import * as React from "react"
 import { cn } from "@/lib/utils"
 

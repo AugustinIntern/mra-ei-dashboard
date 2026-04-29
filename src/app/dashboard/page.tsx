@@ -1,5 +1,7 @@
 "use client";
 
+/** File: UI/application module for the dashboard project. */
+
 import React, { useEffect, useState, useCallback } from 'react';
 import { StatCard } from '@/components/ui/StatCard';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -162,6 +164,7 @@ export default function DashboardPage() {
   const getFilteredSuccessCount = () => {
     const now = getMauritiusNow();
     return successRecords.filter(record => {
+      if (!record.fiscalisedAt) return false;
       const d = parseMauritiusDate(record.fiscalisedAt);
       if (!d) return false;
 

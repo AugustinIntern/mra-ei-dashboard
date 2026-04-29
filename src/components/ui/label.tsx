@@ -1,4 +1,6 @@
-"use client"
+"use client";
+
+/** File: UI/application module for the dashboard project. */
 
 import * as React from "react"
 import { Label as LabelPrimitive } from "radix-ui"

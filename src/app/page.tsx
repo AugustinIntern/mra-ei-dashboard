@@ -1,3 +1,4 @@
+/** File: UI/application module for the dashboard project. */
 import Image from "next/image";
 
 export default function Home() {

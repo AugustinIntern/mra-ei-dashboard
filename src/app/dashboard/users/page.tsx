@@ -1,23 +1,43 @@
 "use client";
 
+/** File: UI/application module for the dashboard project. */
+
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
 } from '@/components/ui/table';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
-import { Search, RefreshCw, Key } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Search, RefreshCw, Key, Loader2 } from 'lucide-react';
 import { formatMauritiusDateTime } from '@/lib/utils';
-import { User } from '@/types';
+import { ApiKey, User } from '@/types';
 import { CreateUserDialog } from '@/components/users/CreateUserDialog';
+import { toast } from 'sonner';
 
 const API_BASE = '/api-proxy';
 const ENDPOINT = `${API_BASE}/admin/users`;
@@ -36,6 +56,12 @@ export default function UsersPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
 
+  const [selectedKeyByUser, setSelectedKeyByUser] = useState<Record<string, string>>({});
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pendingUserId, setPendingUserId] = useState<string | null>(null);
+  const [pendingKeyId, setPendingKeyId] = useState<string | null>(null);
+  const [isDeactivating, setIsDeactivating] = useState(false);
+
   /**
    * Data fetcher for all company/user records.
    * @param isAuto - If true, prevents full-screen loading state (for silent refresh).
@@ -43,7 +69,7 @@ export default function UsersPage() {
   const fetchUsers = useCallback(async (isAuto = false) => {
     if (!isAuto) setLoading(true);
     else setIsRefreshing(true);
-    
+
     try {
       const res = await fetch(ENDPOINT, {
         headers: {
@@ -51,14 +77,34 @@ export default function UsersPage() {
           'Content-Type': 'application/json',
         },
       });
-      
+
       if (!res.ok) throw new Error('Failed to fetch');
-      
+
       const data = await res.json();
-      setUsers(Array.isArray(data) ? data : data.data || []);
+      const nextUsers = Array.isArray(data) ? data : data.data || [];
+      setUsers(nextUsers);
+
+      // Keep per-user key selection stable; auto-seed first active key when missing.
+      setSelectedKeyByUser((prev) => {
+        const next = { ...prev };
+        for (const user of nextUsers) {
+          const activeKeys = (user.apiKeys || []).filter((k: ApiKey) => k.isActive);
+          if (activeKeys.length === 0) {
+            delete next[user.id];
+            continue;
+          }
+
+          const existing = next[user.id];
+          const existsAndActive = activeKeys.some((k: ApiKey) => k.id === existing);
+          if (!existsAndActive) {
+            next[user.id] = activeKeys[0].id;
+          }
+        }
+        return next;
+      });
+
       setError(false);
-    } catch (err) {
-      console.error('Fetch users error:', err);
+    } catch {
       setError(true);
     } finally {
       setLoading(false);
@@ -69,12 +115,12 @@ export default function UsersPage() {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchUsers();
-    
+
     // Refresh table data every 60 seconds
     const interval = setInterval(() => {
       fetchUsers(true);
     }, 60000);
-    
+
     return () => clearInterval(interval);
   }, [fetchUsers]);
 
@@ -83,22 +129,17 @@ export default function UsersPage() {
    */
   const filteredUsers = useMemo(() => {
     if (!searchQuery) return users;
-    
+
     const query = searchQuery.toLowerCase();
-    return users.filter(user => 
+    return users.filter(user =>
       user.name?.toLowerCase().includes(query) ||
       user.userName?.toLowerCase().includes(query) ||
       user.ebsId?.toLowerCase().includes(query)
     );
   }, [users, searchQuery]);
 
-  /**
-   * Aggregates key counts for a specific company.
-   */
-  const getUserApiKeyStats = (user: User) => {
-    const total = user.apiKeys?.length || 0;
-    const active = user.apiKeys?.filter(k => k.isActive).length || 0;
-    return { total, active };
+  const getActiveKeys = (user: User): ApiKey[] => {
+    return (user.apiKeys || []).filter((key): key is ApiKey => Boolean(key?.id) && key.isActive);
   };
 
   /**
@@ -106,20 +147,70 @@ export default function UsersPage() {
    */
   const getUserLastUsed = (user: User) => {
     if (!user.apiKeys || user.apiKeys.length === 0) return null;
-    
+
     const lastUsedDates = user.apiKeys
       .map(k => k.lastUsedAt)
       .filter(Boolean) as string[];
-      
+
     if (lastUsedDates.length === 0) return null;
-    
+
     return lastUsedDates.reduce((a, b) => (new Date(a) > new Date(b) ? a : b));
   };
 
-  const handleDeactivate = (userId: string) => {
-    // Logic for key deactivation (API placeholder)
-    alert(`Deactivating keys for company: ${userId}`);
+  const openDeactivateDialog = (user: User) => {
+    const activeKeys = getActiveKeys(user);
+    if (activeKeys.length === 0) return;
+
+    const selected = selectedKeyByUser[user.id] && activeKeys.some((k) => k.id === selectedKeyByUser[user.id])
+      ? selectedKeyByUser[user.id]
+      : activeKeys[0].id;
+
+    setPendingUserId(user.id);
+    setPendingKeyId(selected);
+    setConfirmOpen(true);
   };
+
+  const confirmDeactivate = async () => {
+    if (!pendingKeyId) return;
+
+    setIsDeactivating(true);
+    try {
+      const res = await fetch(`${API_BASE}/admin/keys/${pendingKeyId}`, {
+        method: 'DELETE',
+        headers: {
+          'x-admin-secret': process.env.NEXT_PUBLIC_ADMIN_SECRET || '',
+          'Content-Type': 'application/json',
+        },
+      });
+
+      let payload: { message?: string; error?: string } | null = null;
+      try {
+        payload = await res.json();
+      } catch {
+        payload = null;
+      }
+
+      if (!res.ok) {
+        throw new Error(payload?.message || payload?.error || 'Failed to deactivate API key');
+      }
+
+      toast.success('API key deactivated successfully');
+      setConfirmOpen(false);
+      setPendingKeyId(null);
+      setPendingUserId(null);
+      await fetchUsers(true);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to deactivate API key';
+      toast.error(message);
+    } finally {
+      setIsDeactivating(false);
+    }
+  };
+
+  const pendingUser = useMemo(
+    () => users.find((u) => u.id === pendingUserId) || null,
+    [users, pendingUserId]
+  );
 
   return (
     <div className="flex-1 space-y-8 p-8 md:p-10 lg:p-12 max-w-screen-2xl mx-auto font-sans">
@@ -134,7 +225,7 @@ export default function UsersPage() {
             Overview of registered companies, their EBS integration IDs, and API key statuses.
           </p>
         </div>
-        
+
         <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
           <div className="relative w-full md:w-80">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -194,15 +285,17 @@ export default function UsersPage() {
                 // Empty state handler
                 <TableRow>
                   <TableCell colSpan={8} className="h-32 text-center text-muted-foreground italic">
-                    {searchQuery ? "No companies matching your search" : "No registered companies found"}
+                    {searchQuery ? 'No companies matching your search' : 'No registered companies found'}
                   </TableCell>
                 </TableRow>
               ) : (
                 // Paginated/Filtered data rows
                 filteredUsers.map((user) => {
-                  const stats = getUserApiKeyStats(user);
                   const lastUsed = getUserLastUsed(user);
-                  
+                  const activeKeys = getActiveKeys(user);
+                  const hasActiveKey = (user.apiKeys || []).some((k) => k.isActive);
+                  const hasKeys = (user.apiKeys || []).length > 0;
+
                   return (
                     <TableRow key={user.id} className="group hover:bg-muted/30">
                       <TableCell className="font-semibold text-base py-4 px-6 text-foreground">{user.name}</TableCell>
@@ -210,19 +303,13 @@ export default function UsersPage() {
                       <TableCell className="font-mono text-xs py-4 px-6 text-muted-foreground">{user.ebsId}</TableCell>
                       <TableCell className="text-center py-4 px-6 text-base text-muted-foreground">{user.areaCode}</TableCell>
                       <TableCell className="py-4 px-6">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <Badge variant="success" className="px-2 py-0.5 text-xs font-bold">
-                            {stats.active} Active
-                          </Badge>
-                          {stats.total - stats.active > 0 && (
-                            <Badge variant="destructive" className="px-2 py-0.5 text-xs font-bold">
-                              {stats.total - stats.active} Inactive
-                            </Badge>
-                          )}
-                          {stats.total === 0 && (
-                            <span className="text-xs text-muted-foreground italic">No keys</span>
-                          )}
-                        </div>
+                        {!hasKeys ? (
+                          <Badge variant="secondary">No Keys</Badge>
+                        ) : hasActiveKey ? (
+                          <Badge className="bg-green-500 text-white">Active</Badge>
+                        ) : (
+                          <Badge className="bg-red-500 text-white">Inactive</Badge>
+                        )}
                       </TableCell>
                       <TableCell className="text-sm py-4 px-6 whitespace-nowrap text-muted-foreground">
                         {lastUsed ? formatMauritiusDateTime(lastUsed) : '-'}
@@ -231,17 +318,47 @@ export default function UsersPage() {
                         {formatMauritiusDateTime(user.createdAt)}
                       </TableCell>
                       <TableCell className="text-right py-4 px-6">
-                        {/* Hidden action trigger, visible on row hover */}
-                        {stats.active > 0 && (
-                          <Button 
-                            variant="destructive" 
-                            size="sm" 
-                            className="h-8 px-2 text-[10px] font-bold uppercase tracking-widest transition-opacity opacity-0 group-hover:opacity-100"
-                            onClick={() => handleDeactivate(user.id)}
-                          >
-                            <Key className="mr-1 h-3 w-3" />
-                            Deactivate
-                          </Button>
+                        {activeKeys.length === 0 ? (
+                          <Badge variant="outline" className="text-muted-foreground border-muted-foreground/40">
+                            No Active Keys
+                          </Badge>
+                        ) : (
+                          <div className="flex items-center justify-end gap-2">
+                            {activeKeys.length > 1 && (
+                              <Select
+                                value={selectedKeyByUser[user.id] || activeKeys[0].id}
+                                onValueChange={(value) => {
+                                  setSelectedKeyByUser((prev) => ({ ...prev, [user.id]: value }));
+                                }}
+                              >
+                                <SelectTrigger className="h-8 w-[170px] text-xs">
+                                  <SelectValue placeholder="Select key" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {activeKeys.map((key, idx) => (
+                                    <SelectItem key={key.id} value={key.id}>
+                                      {key.label || `Key ${idx + 1}`}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            )}
+
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              className="h-8 px-2 text-[10px] font-bold uppercase tracking-widest"
+                              onClick={() => {
+                                if (!selectedKeyByUser[user.id] && activeKeys[0]) {
+                                  setSelectedKeyByUser((prev) => ({ ...prev, [user.id]: activeKeys[0].id }));
+                                }
+                                openDeactivateDialog(user);
+                              }}
+                            >
+                              <Key className="mr-1 h-3 w-3" />
+                              Deactivate
+                            </Button>
+                          </div>
                         )}
                       </TableCell>
                     </TableRow>
@@ -252,6 +369,45 @@ export default function UsersPage() {
           </Table>
         </CardContent>
       </Card>
+
+      <AlertDialog open={confirmOpen} onOpenChange={(open) => {
+        if (isDeactivating) return;
+        setConfirmOpen(open);
+      }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Deactivate API Key</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to deactivate this API key? The user will immediately lose access to the API.
+            </AlertDialogDescription>
+            {pendingUser && pendingKeyId && (
+              <p className="text-xs text-muted-foreground pt-1">
+                Company: {pendingUser.name} • Key ID: {pendingKeyId}
+              </p>
+            )}
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeactivating}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                if (!isDeactivating) void confirmDeactivate();
+              }}
+              disabled={isDeactivating || !pendingKeyId}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeactivating ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deactivating...
+                </>
+              ) : (
+                'Confirm Deactivate'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

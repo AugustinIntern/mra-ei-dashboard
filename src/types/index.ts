@@ -1,3 +1,4 @@
+/** File: UI/application module for the dashboard project. */
 /**
  * Represents a statistical card's data structure on the dashboard.
  */
@@ -40,8 +41,17 @@ export interface User {
  */
 export interface AuditRecord {
   id: string;
+  userId?: string;
+  invoiceNumber?: string;
   status: 'SUCCESS' | 'FAILED';
-  fiscalisedAt: string; // Internal date format "dd/MM/yyyy, HH:mm:ss"
+  irn?: string | null;
+  errorMessage?: string | null;
+  fiscalisedAt?: string | null; // Internal date format "dd/MM/yyyy, HH:mm:ss"
+  createdAt?: string | null;
+  user?: {
+    name?: string;
+    ebsId?: string;
+  };
   [key: string]: unknown;
 }
 
