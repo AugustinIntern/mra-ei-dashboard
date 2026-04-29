@@ -47,7 +47,8 @@ const formSchema = z.object({
   areaCode: z.coerce.number().min(1, "Area Code is required"),
 });
 
-type FormValues = z.infer<typeof formSchema>;
+type FormOutputValues = z.output<typeof formSchema>;
+type FormInputValues = z.input<typeof formSchema>;
 
 interface CreateUserDialogProps {
   onSuccess: () => void;
@@ -64,7 +65,7 @@ export function CreateUserDialog({ onSuccess }: CreateUserDialogProps) {
   const [createdApiKey, setCreatedApiKey] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const form = useForm<FormValues>({
+  const form = useForm<FormInputValues, unknown, FormOutputValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
@@ -78,7 +79,7 @@ export function CreateUserDialog({ onSuccess }: CreateUserDialogProps) {
   /**
    * Submits company registration data to the management API.
    */
-  const onSubmit = async (values: FormValues) => {
+  const onSubmit = async (values: FormOutputValues) => {
     setIsSubmitting(true);
     try {
       const res = await fetch("/api-proxy/admin/users", {
@@ -235,7 +236,17 @@ export function CreateUserDialog({ onSuccess }: CreateUserDialogProps) {
                     <FormItem>
                       <FormLabel>Area Code</FormLabel>
                       <FormControl>
-                        <Input type="number" placeholder="100" {...field} disabled={isSubmitting} className="h-10" />
+                        <Input
+                          type="number"
+                          placeholder="100"
+                          name={field.name}
+                          ref={field.ref}
+                          onBlur={field.onBlur}
+                          value={typeof field.value === "number" || typeof field.value === "string" ? field.value : ""}
+                          onChange={(e) => field.onChange(e.target.value)}
+                          disabled={isSubmitting}
+                          className="h-10"
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
