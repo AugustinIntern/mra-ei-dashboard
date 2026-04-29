@@ -33,7 +33,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Search, RefreshCw, Key, Loader2 } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Search, RefreshCw, Key, Loader2, Copy, Check } from 'lucide-react';
 import { formatMauritiusDateTime } from '@/lib/utils';
 import { ApiKey, User } from '@/types';
 import { CreateUserDialog } from '@/components/users/CreateUserDialog';
@@ -61,6 +69,13 @@ export default function UsersPage() {
   const [pendingUserId, setPendingUserId] = useState<string | null>(null);
   const [pendingKeyId, setPendingKeyId] = useState<string | null>(null);
   const [isDeactivating, setIsDeactivating] = useState(false);
+
+  const [reactivateConfirmOpen, setReactivateConfirmOpen] = useState(false);
+  const [pendingReactivateUserId, setPendingReactivateUserId] = useState<string | null>(null);
+  const [isReactivating, setIsReactivating] = useState(false);
+  const [newApiKey, setNewApiKey] = useState<string | null>(null);
+  const [showNewApiKeyDialog, setShowNewApiKeyDialog] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   /**
    * Data fetcher for all company/user records.
@@ -207,6 +222,58 @@ export default function UsersPage() {
     }
   };
 
+  const openReactivateDialog = (userId: string) => {
+    setPendingReactivateUserId(userId);
+    setReactivateConfirmOpen(true);
+  };
+
+  const confirmReactivate = async () => {
+    if (!pendingReactivateUserId) return;
+
+    setIsReactivating(true);
+    try {
+      const res = await fetch(`${API_BASE}/admin/users/${pendingReactivateUserId}/rotate-key`, {
+        method: 'POST',
+        headers: {
+          'x-admin-secret': process.env.NEXT_PUBLIC_ADMIN_SECRET || '',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ label: 'reactivated' }),
+      });
+
+      let payload: { message?: string; error?: string; apiKey?: string } | null = null;
+      try {
+        payload = await res.json();
+      } catch {
+        payload = null;
+      }
+
+      if (!res.ok) {
+        throw new Error(payload?.message || payload?.error || 'Failed to reactivate API key');
+      }
+
+      if (!payload?.apiKey) {
+        throw new Error('New API key was not returned by the server');
+      }
+
+      setReactivateConfirmOpen(false);
+      setNewApiKey(payload.apiKey);
+      setShowNewApiKeyDialog(true);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to reactivate API key';
+      toast.error(message);
+    } finally {
+      setIsReactivating(false);
+    }
+  };
+
+  const handleCopyApiKey = async () => {
+    if (!newApiKey) return;
+    await navigator.clipboard.writeText(newApiKey);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+
   const pendingUser = useMemo(
     () => users.find((u) => u.id === pendingUserId) || null,
     [users, pendingUserId]
@@ -319,9 +386,14 @@ export default function UsersPage() {
                       </TableCell>
                       <TableCell className="text-right py-4 px-6">
                         {activeKeys.length === 0 ? (
-                          <Badge variant="outline" className="text-muted-foreground border-muted-foreground/40">
-                            No Active Keys
-                          </Badge>
+                          <Button
+                            variant="default"
+                            size="sm"
+                            className="h-8 px-2 text-[10px] font-bold uppercase tracking-widest bg-green-600 hover:bg-green-700 text-white"
+                            onClick={() => openReactivateDialog(user.id)}
+                          >
+                            Reactivate
+                          </Button>
                         ) : (
                           <div className="flex items-center justify-end gap-2">
                             {activeKeys.length > 1 && (
@@ -408,6 +480,84 @@ export default function UsersPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AlertDialog open={reactivateConfirmOpen} onOpenChange={(open) => {
+        if (isReactivating) return;
+        setReactivateConfirmOpen(open);
+      }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reactivate API Access</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will generate a new API key for this user. They will be able to access the API again. Are you sure?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isReactivating}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                if (!isReactivating) void confirmReactivate();
+              }}
+              disabled={isReactivating || !pendingReactivateUserId}
+              className="bg-green-600 text-white hover:bg-green-700"
+            >
+              {isReactivating ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Reactivating...
+                </>
+              ) : (
+                'Confirm Reactivate'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <Dialog
+        open={showNewApiKeyDialog}
+        onOpenChange={(open) => {
+          setShowNewApiKeyDialog(open);
+          if (!open) {
+            setNewApiKey(null);
+            setCopied(false);
+            void fetchUsers(true);
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>New API Key Generated</DialogTitle>
+            <DialogDescription>
+              Save this API key now — it will never be shown again
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-2">
+            <Badge variant="destructive" className="text-xs font-semibold">
+              Save this API key now — it will never be shown again
+            </Badge>
+            <div className="flex items-center gap-2">
+              <Input readOnly value={newApiKey || ''} className="font-mono text-xs" />
+              <Button type="button" variant="outline" size="icon" onClick={() => void handleCopyApiKey()}>
+                {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+              </Button>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              onClick={() => {
+                setShowNewApiKeyDialog(false);
+              }}
+            >
+              Done
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
