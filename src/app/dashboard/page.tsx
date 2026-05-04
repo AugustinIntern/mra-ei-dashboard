@@ -15,7 +15,7 @@ import { AuditRecord, User } from '@/types';
  * All requests go through the secure Next.js proxy route at /api/admin
  * which adds authentication and forwards to the VPS API.
  */
-const API_BASE = '/api';
+const API_BASE = ''; // Proxy handles the base URL, so we use relative paths here.
 const ENDPOINTS = {
   success: `${API_BASE}/admin/audit?status=SUCCESS`,
   failed: `${API_BASE}/admin/audit?status=FAILED`,
