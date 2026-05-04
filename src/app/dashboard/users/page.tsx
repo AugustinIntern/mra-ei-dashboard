@@ -47,7 +47,7 @@ import { ApiKey, User } from '@/types';
 import { CreateUserDialog } from '@/components/users/CreateUserDialog';
 import { toast } from 'sonner';
 
-const API_BASE = '/api-proxy';
+const API_BASE = '/api/admin';
 const ENDPOINT = `${API_BASE}/admin/users`;
 
 /**
@@ -88,7 +88,6 @@ export default function UsersPage() {
     try {
       const res = await fetch(ENDPOINT, {
         headers: {
-          'x-admin-secret': process.env.NEXT_PUBLIC_ADMIN_SECRET || '',
           'Content-Type': 'application/json',
         },
       });
@@ -193,7 +192,6 @@ export default function UsersPage() {
       const res = await fetch(`${API_BASE}/admin/keys/${pendingKeyId}`, {
         method: 'DELETE',
         headers: {
-          'x-admin-secret': process.env.NEXT_PUBLIC_ADMIN_SECRET || '',
           'Content-Type': 'application/json',
         },
       });
@@ -235,7 +233,6 @@ export default function UsersPage() {
       const res = await fetch(`${API_BASE}/admin/users/${pendingReactivateUserId}/rotate-key`, {
         method: 'POST',
         headers: {
-          'x-admin-secret': process.env.NEXT_PUBLIC_ADMIN_SECRET || '',
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ label: 'reactivated' }),

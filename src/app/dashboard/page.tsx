@@ -12,15 +12,15 @@ import { AuditRecord, User } from '@/types';
 
 /**
  * Base configuration for API communication.
- * '/api-proxy' routes to the remote server via Next.js rewrites.
+ * All requests go through the secure Next.js proxy route at /api/admin
+ * which adds authentication and forwards to the VPS API.
  */
-const API_BASE = '/api-proxy';
-
+const API_BASE = '/api/admin';
 const ENDPOINTS = {
   success: `${API_BASE}/admin/audit?status=SUCCESS`,
   failed: `${API_BASE}/admin/audit?status=FAILED`,
   users: `${API_BASE}/admin/users`,
-  health: `${API_BASE}`
+  health: `/`,
 };
 
 /**
@@ -54,7 +54,6 @@ export default function DashboardPage() {
    * Helper to construct authorized request headers.
    */
   const getHeaders = () => ({
-    'x-admin-secret': process.env.NEXT_PUBLIC_ADMIN_SECRET || '',
     'Content-Type': 'application/json',
   });
 

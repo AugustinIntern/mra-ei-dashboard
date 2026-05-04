@@ -82,11 +82,10 @@ export function CreateUserDialog({ onSuccess }: CreateUserDialogProps) {
   const onSubmit = async (values: FormOutputValues) => {
     setIsSubmitting(true);
     try {
-      const res = await fetch("/api-proxy/admin/users", {
+      const res = await fetch("/api/admin/admin/users", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-admin-secret": process.env.NEXT_PUBLIC_ADMIN_SECRET || "",
         },
         body: JSON.stringify(values),
       });

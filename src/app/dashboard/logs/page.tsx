@@ -45,7 +45,7 @@ import { AuditRecord } from "@/types";
 import type { DateRange } from "react-day-picker";
 import * as Portal from "@radix-ui/react-portal";
 
-const API_BASE = '/api-proxy';
+const API_BASE = '/api/admin';
 const AUDIT_ENDPOINT = `${API_BASE}/admin/audit`;
 const FETCH_LIMIT = 200;
 
@@ -121,7 +121,6 @@ export default function LogsPage() {
 
   const getHeaders = useCallback(
     () => ({
-      "x-admin-secret": process.env.NEXT_PUBLIC_ADMIN_SECRET || "",
       "Content-Type": "application/json",
     }),
     []
