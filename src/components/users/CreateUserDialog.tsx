@@ -154,7 +154,7 @@ export function CreateUserDialog({ onSuccess }: CreateUserDialogProps) {
           Add Company
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[450px]">
+      <DialogContent className="sm:max-w-[450px] bg-background text-foreground backdrop-blur-none p-6">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Building2 className="h-5 w-5 text-primary" />
@@ -208,7 +208,7 @@ export function CreateUserDialog({ onSuccess }: CreateUserDialogProps) {
                   <FormItem>
                     <FormLabel>Company Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter company name" {...field} disabled={isSubmitting} className="h-10" />
+                      <Input placeholder="Enter company name" {...field} disabled={isSubmitting} className="h-10 bg-background border-input text-foreground" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -223,7 +223,7 @@ export function CreateUserDialog({ onSuccess }: CreateUserDialogProps) {
                     <FormItem>
                       <FormLabel>EBS ID</FormLabel>
                       <FormControl>
-                        <Input placeholder="EBS-XXXXX" {...field} disabled={isSubmitting} className="h-10" />
+                        <Input placeholder="EBS-XXXXX" {...field} disabled={isSubmitting} className="h-10 bg-background border-input text-foreground" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -245,7 +245,7 @@ export function CreateUserDialog({ onSuccess }: CreateUserDialogProps) {
                           value={typeof field.value === "number" || typeof field.value === "string" ? field.value : ""}
                           onChange={(e) => field.onChange(e.target.value)}
                           disabled={isSubmitting}
-                          className="h-10"
+                          className="h-10 bg-background border-input text-foreground"
                         />
                       </FormControl>
                       <FormMessage />
@@ -257,7 +257,7 @@ export function CreateUserDialog({ onSuccess }: CreateUserDialogProps) {
               <div className="space-y-4 pt-2">
                 <div className="flex items-center gap-2">
                    <div className="h-px bg-border flex-1" />
-                   <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">MRA Authentication</span>
+                   <span className="text-xs font-medium text-muted-foreground">MRA Authentication</span>
                    <div className="h-px bg-border flex-1" />
                 </div>
 
@@ -268,7 +268,7 @@ export function CreateUserDialog({ onSuccess }: CreateUserDialogProps) {
                     <FormItem>
                       <FormLabel>MRA Username</FormLabel>
                       <FormControl>
-                        <Input placeholder="Your MRA login username" {...field} disabled={isSubmitting} className="h-10" />
+                        <Input placeholder="Enter MRA username" {...field} disabled={isSubmitting} className="h-10 bg-background border-input text-foreground" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -285,10 +285,10 @@ export function CreateUserDialog({ onSuccess }: CreateUserDialogProps) {
                         <div className="relative">
                           <Input 
                             type={showPassword ? "text" : "password"} 
-                            placeholder="Your MRA login password" 
+                            placeholder="Enter MRA password" 
                             {...field} 
                             disabled={isSubmitting} 
-                            className="h-10 pr-10"
+                            className="h-10 pr-10 bg-background border-input text-foreground"
                           />
                           <button
                             type="button"
@@ -307,6 +307,7 @@ export function CreateUserDialog({ onSuccess }: CreateUserDialogProps) {
 
               <DialogFooter className="pt-6">
                 <Button 
+                  variant="default"
                   type="submit" 
                   className="w-full sm:w-auto h-11 px-8 font-bold" 
                   disabled={isSubmitting}

@@ -16,20 +16,23 @@ export function cn(...inputs: ClassValue[]) {
  */
 export function parseMauritiusDate(dateStr: string): Date | null {
   try {
-    const [datePart, timePart] = dateStr.split(', ');
-    if (!datePart || !timePart) return null;
-    
-    const [day, month, year] = datePart.split('/');
-    const [hours, minutes, seconds] = timePart.split(':');
-    
-    return new Date(
-      parseInt(year),
-      parseInt(month) - 1,
-      parseInt(day),
-      parseInt(hours),
-      parseInt(minutes),
-      parseInt(seconds)
-    );
+    if (!dateStr) return null;
+
+    if (dateStr.includes('/')) {
+      const [datePart, timePart = '00:00:00'] = dateStr.split(', ');
+      const [day, month, year] = datePart.split('/').map((v) => parseInt(v, 10));
+      const [hours, minutes, seconds] = timePart.split(':').map((v) => parseInt(v, 10));
+
+      if ([day, month, year, hours, minutes, seconds].some((v) => Number.isNaN(v))) {
+        return null;
+      }
+
+      return new Date(year, month - 1, day, hours, minutes, seconds);
+    }
+
+    // Fallback for ISO/RFC timestamps returned by some API responses.
+    const parsed = new Date(dateStr);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
   } catch {
     return null;
   }
@@ -39,37 +42,74 @@ export function parseMauritiusDate(dateStr: string): Date | null {
  * Gets the current time adjusted to Mauritius Time (UTC+4).
  */
 export function getMauritiusNow(): Date {
-  const now = new Date();
-  const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
-  return new Date(utc + (3600000 * 4));
+  return new Date();
+}
+
+function getMauritiusDateParts(date: Date): { year: number; month: number; day: number } {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Indian/Mauritius',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).formatToParts(date);
+
+  const year = Number(parts.find((p) => p.type === 'year')?.value);
+  const month = Number(parts.find((p) => p.type === 'month')?.value);
+  const day = Number(parts.find((p) => p.type === 'day')?.value);
+
+  return { year, month, day };
+}
+
+function getMauritiusDayNumber(date: Date): number {
+  const { year, month, day } = getMauritiusDateParts(date);
+  return Math.floor(Date.UTC(year, month - 1, day) / 86400000);
+}
+
+function getMauritiusWeekday(date: Date): number {
+  const weekday = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Indian/Mauritius',
+    weekday: 'short'
+  }).format(date);
+
+  const map: Record<string, number> = {
+    Mon: 1,
+    Tue: 2,
+    Wed: 3,
+    Thu: 4,
+    Fri: 5,
+    Sat: 6,
+    Sun: 7
+  };
+
+  return map[weekday] ?? 1;
 }
 
 /**
  * Checks if a date falls on the same calendar day as 'now'.
  */
 export function isToday(d: Date, now: Date): boolean {
-  return d.getFullYear() === now.getFullYear() &&
-         d.getMonth() === now.getMonth() &&
-         d.getDate() === now.getDate();
+  const a = getMauritiusDateParts(d);
+  const b = getMauritiusDateParts(now);
+  return a.year === b.year && a.month === b.month && a.day === b.day;
 }
 
 /**
  * Checks if a date falls within the current ISO week (starting Monday).
  */
 export function isThisWeek(d: Date, now: Date): boolean {
-  const day = now.getDay() || 7; 
-  if (day !== 1) {
-    now.setHours(-24 * (day - 1)); 
-  }
-  return d >= new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const nowDay = getMauritiusDayNumber(now);
+  const dDay = getMauritiusDayNumber(d);
+  const startOfWeek = nowDay - (getMauritiusWeekday(now) - 1);
+  return dDay >= startOfWeek && dDay <= nowDay;
 }
 
 /**
  * Checks if a date falls within the current calendar month.
  */
 export function isThisMonth(d: Date, now: Date): boolean {
-  return d.getFullYear() === now.getFullYear() &&
-         d.getMonth() === now.getMonth();
+  const a = getMauritiusDateParts(d);
+  const b = getMauritiusDateParts(now);
+  return a.year === b.year && a.month === b.month;
 }
 
 /**

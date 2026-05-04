@@ -29,6 +29,7 @@ const ENDPOINTS = {
  */
 export default function DashboardPage() {
   const [successRecords, setSuccessRecords] = useState<AuditRecord[]>([]);
+  const [successTotal, setSuccessTotal] = useState<number>(0);
   const [failedCount, setFailedCount] = useState<number>(0);
   const [activeUsersCount, setActiveUsersCount] = useState<number>(0);
   const [healthStatus, setHealthStatus] = useState<'Operational' | 'Unreachable'>('Operational');
@@ -47,7 +48,7 @@ export default function DashboardPage() {
     health: false,
   });
 
-  const [fiscalisedTab, setFiscalisedTab] = useState<'today' | 'week' | 'month'>('today');
+  const [fiscalisedTab, setFiscalisedTab] = useState<'all' | 'today' | 'week' | 'month'>('all');
 
   /**
    * Helper to construct authorized request headers.
@@ -65,7 +66,9 @@ export default function DashboardPage() {
       const res = await fetch(ENDPOINTS.success, { headers: getHeaders() });
       if (!res.ok) throw new Error('Failed');
       const data = await res.json();
-      setSuccessRecords(Array.isArray(data) ? data : data.logs || data.data || []);
+      const records = Array.isArray(data) ? data : data.logs || data.data || [];
+      setSuccessRecords(records);
+      setSuccessTotal(typeof data?.total === 'number' ? data.total : records.length);
       setError(p => ({ ...p, success: false }));
     } catch {
       setError(p => ({ ...p, success: true }));
@@ -162,6 +165,8 @@ export default function DashboardPage() {
    * Computes the number of fiscalisations based on the currently selected time window.
    */
   const getFilteredSuccessCount = () => {
+    if (fiscalisedTab === 'all') return successTotal;
+
     const now = getMauritiusNow();
     return successRecords.filter(record => {
       if (!record.fiscalisedAt) return false;
@@ -176,6 +181,21 @@ export default function DashboardPage() {
       }
     }).length;
   };
+
+  const fiscalisedDescription = (() => {
+    switch (fiscalisedTab) {
+      case 'all':
+        return 'Total successful records';
+      case 'today':
+        return 'Successful records for today';
+      case 'week':
+        return 'Successful records this week';
+      case 'month':
+        return 'Successful records this month';
+      default:
+        return 'Total successful records';
+    }
+  })();
 
   return (
     <div className="flex-1 space-y-8 p-8 md:p-10 lg:p-12 max-w-7xl mx-auto font-sans">
@@ -196,18 +216,18 @@ export default function DashboardPage() {
           loading={loading.success}
           error={error.success}
           icon={<FileText className="h-5 w-5" />}
-          description={`Successful records for ${fiscalisedTab}`}
-          badge={<Badge variant="success" className="ml-2 uppercase tracking-wider text-[10px]">Active</Badge>}
+          description={fiscalisedDescription}
           extraContent={
             <Tabs
               value={fiscalisedTab}
-              onValueChange={(v: string) => setFiscalisedTab(v as 'today' | 'week' | 'month')}
+              onValueChange={(v: string) => setFiscalisedTab(v as 'all' | 'today' | 'week' | 'month')}
               className="mt-3 w-full"
             >
-              <TabsList className="grid w-full grid-cols-3 h-9 bg-muted/50">
-                <TabsTrigger value="today" className="text-xs">Today</TabsTrigger>
-                <TabsTrigger value="week" className="text-xs">This Week</TabsTrigger>
-                <TabsTrigger value="month" className="text-xs">This Month</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-4 gap-1 h-9 bg-muted/50">
+                <TabsTrigger value="all" className="text-xs px-2">All Time</TabsTrigger>
+                <TabsTrigger value="today" className="text-xs px-2">Today</TabsTrigger>
+                <TabsTrigger value="week" className="text-xs px-2">Week</TabsTrigger>
+                <TabsTrigger value="month" className="text-xs px-2">Month</TabsTrigger>
               </TabsList>
             </Tabs>
           }

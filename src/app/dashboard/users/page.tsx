@@ -522,11 +522,10 @@ export default function UsersPage() {
           if (!open) {
             setNewApiKey(null);
             setCopied(false);
-            void fetchUsers(true);
           }
         }}
       >
-        <DialogContent>
+        <DialogContent className="bg-background text-foreground backdrop-blur-none">
           <DialogHeader>
             <DialogTitle>New API Key Generated</DialogTitle>
             <DialogDescription>
@@ -535,9 +534,6 @@ export default function UsersPage() {
           </DialogHeader>
 
           <div className="space-y-2">
-            <Badge variant="destructive" className="text-xs font-semibold">
-              Save this API key now — it will never be shown again
-            </Badge>
             <div className="flex items-center gap-2">
               <Input readOnly value={newApiKey || ''} className="font-mono text-xs" />
               <Button type="button" variant="outline" size="icon" onClick={() => void handleCopyApiKey()}>
@@ -551,6 +547,9 @@ export default function UsersPage() {
               type="button"
               onClick={() => {
                 setShowNewApiKeyDialog(false);
+                setTimeout(() => {
+                  void fetchUsers(true);
+                }, 0);
               }}
             >
               Done
