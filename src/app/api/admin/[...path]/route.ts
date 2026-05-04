@@ -17,7 +17,11 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path: st
   const params = await context.params;
   const pathSegments = params.path.join('/');
   const queryString = request.nextUrl.searchParams.toString();
-  const targetUrl = `${API_URL.replace(/\/$/, '')}/${pathSegments}${queryString ? `?${queryString}` : ''}`;
+  const rawBase = API_URL.replace(/\/+$/, '');
+  const baseUrl = rawBase.endsWith('/admin') && pathSegments.startsWith('admin/')
+    ? rawBase.slice(0, -'/admin'.length)
+    : rawBase;
+  const targetUrl = `${baseUrl}/${pathSegments}${queryString ? `?${queryString}` : ''}`;
 
   const headers = new Headers(request.headers);
   headers.set('x-admin-secret', ADMIN_SECRET);
@@ -33,13 +37,21 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path: st
     init.body = await request.arrayBuffer();
   }
 
-  const upstream = await fetch(targetUrl, init);
-  const responseHeaders = new Headers(upstream.headers);
-  return new NextResponse(upstream.body, {
-    status: upstream.status,
-    statusText: upstream.statusText,
-    headers: responseHeaders,
-  });
+  try {
+    const upstream = await fetch(targetUrl, init);
+    const responseHeaders = new Headers(upstream.headers);
+    return new NextResponse(upstream.body, {
+      status: upstream.status,
+      statusText: upstream.statusText,
+      headers: responseHeaders,
+    });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Proxy request failed';
+    return NextResponse.json(
+      { error: 'Upstream request failed', message, targetUrl },
+      { status: 502 }
+    );
+  }
 }
 
 export async function GET(request: NextRequest, context: { params: Promise<{ path: string[] }> }) {
