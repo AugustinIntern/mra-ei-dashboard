@@ -15,9 +15,9 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path: st
   }
 
   const params = await context.params;
-  const path = params.path?.join('/') || '';
-  const search = request.nextUrl.search || '';
-  const targetUrl = `${API_URL.replace(/\/$/, '')}/${path}${search}`;
+  const pathSegments = params.path.join('/');
+  const queryString = request.nextUrl.searchParams.toString();
+  const targetUrl = `${API_URL.replace(/\/$/, '')}/${pathSegments}${queryString ? `?${queryString}` : ''}`;
 
   const headers = new Headers(request.headers);
   headers.set('x-admin-secret', ADMIN_SECRET);
