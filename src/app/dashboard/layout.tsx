@@ -1,8 +1,13 @@
-/** File: UI/application module for the dashboard project. */
+/** File: Dashboard shell layout that wraps all dashboard pages with navbar and user controls. */
 import { ReactNode } from "react";
 import { UserButton } from '@clerk/nextjs';
 import { NavBar } from "@/components/ui/NavBar";
 
+/**
+ * Composes the authenticated dashboard page structure.
+ * @param children Child dashboard route content.
+ * @returns Dashboard layout tree.
+ */
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
     <div className="relative flex min-h-screen flex-col bg-background">

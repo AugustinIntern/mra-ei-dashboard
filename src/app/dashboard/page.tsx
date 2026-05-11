@@ -1,6 +1,6 @@
 "use client";
 
-/** File: UI/application module for the dashboard project. */
+/** File: Dashboard overview page that aggregates fiscalisation, failure, user, and health metrics. */
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { StatCard } from '@/components/ui/StatCard';
@@ -23,9 +23,12 @@ const ENDPOINTS = {
   health: `/`,
 };
 
+// ── Overview Dashboard
+
 /**
  * DashboardPage: The main overview screen for the MRA Fiscalisation system.
  * It periodically fetches data across 4 endpoints to provide real-time monitoring.
+ * @returns Dashboard overview UI with real-time KPI cards.
  */
 export default function DashboardPage() {
   const [successRecords, setSuccessRecords] = useState<AuditRecord[]>([]);
@@ -138,9 +141,8 @@ export default function DashboardPage() {
   }, [fetchSuccess, fetchFailed, fetchUsers, fetchHealth]);
 
   useEffect(() => {
-    // Initial fetch
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchAllStats();
+    void fetchAllStats();
 
     // Stats auto-refresh (60s)
     const interval60 = setInterval(() => {

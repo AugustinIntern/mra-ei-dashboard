@@ -1,6 +1,6 @@
 "use client";
 
-/** File: UI/application module for the dashboard project. */
+/** File: Dashboard audit logs page with filtering, pagination, and CSV export tools. */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -101,6 +101,12 @@ function formatDateForRange(date: Date): string {
   return `${day}/${month}/${year}`;
 }
 
+// ── Fiscalisation Logs
+
+/**
+ * Renders the dashboard logs view and orchestrates audit log retrieval/filtering/export.
+ * @returns Logs page UI for fiscalisation audit records.
+ */
 export default function LogsPage() {
   const [logs, setLogs] = useState<AuditRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -170,7 +176,7 @@ export default function LogsPage() {
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchAllLogs();
+    void fetchAllLogs();
   }, [fetchAllLogs]);
 
   useEffect(() => {

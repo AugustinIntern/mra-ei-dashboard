@@ -1,3 +1,4 @@
+/** File: Server route that proxies authenticated dashboard admin requests to the upstream API. */
 import { auth } from '@clerk/nextjs/server';
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -8,12 +9,25 @@ type RouteContext = {
   params?: { path?: string[] } | Promise<{ path?: string[] }>;
 };
 
+// ── Route Helpers
+
+/**
+ * Resolves dynamic catch-all route params into a normalized path string.
+ * @param context Route context from Next.js.
+ * @returns Slash-separated path segments.
+ */
 async function resolvePathSegments(context: RouteContext): Promise<string> {
   const resolvedParams = context.params ? await context.params : undefined;
   const segments = Array.isArray(resolvedParams?.path) ? resolvedParams.path : [];
   return segments.join('/');
 }
 
+/**
+ * Forwards a dashboard request to the upstream admin API after Clerk auth validation.
+ * @param request Incoming request.
+ * @param context Route context containing catch-all path segments.
+ * @returns Upstream response payload and status.
+ */
 async function proxy(request: NextRequest, context: RouteContext) {
   try {
     const { userId } = await auth();
@@ -76,30 +90,74 @@ async function proxy(request: NextRequest, context: RouteContext) {
   }
 }
 
+// ── Route Handlers
+
+/**
+ * Proxies GET requests to the upstream admin API.
+ * @param request Incoming request.
+ * @param context Route context.
+ * @returns Proxied response.
+ */
 export async function GET(request: NextRequest, context: RouteContext) {
   return proxy(request, context);
 }
 
+/**
+ * Proxies POST requests to the upstream admin API.
+ * @param request Incoming request.
+ * @param context Route context.
+ * @returns Proxied response.
+ */
 export async function POST(request: NextRequest, context: RouteContext) {
   return proxy(request, context);
 }
 
+/**
+ * Proxies PUT requests to the upstream admin API.
+ * @param request Incoming request.
+ * @param context Route context.
+ * @returns Proxied response.
+ */
 export async function PUT(request: NextRequest, context: RouteContext) {
   return proxy(request, context);
 }
 
+/**
+ * Proxies PATCH requests to the upstream admin API.
+ * @param request Incoming request.
+ * @param context Route context.
+ * @returns Proxied response.
+ */
 export async function PATCH(request: NextRequest, context: RouteContext) {
   return proxy(request, context);
 }
 
+/**
+ * Proxies DELETE requests to the upstream admin API.
+ * @param request Incoming request.
+ * @param context Route context.
+ * @returns Proxied response.
+ */
 export async function DELETE(request: NextRequest, context: RouteContext) {
   return proxy(request, context);
 }
 
+/**
+ * Proxies OPTIONS requests to the upstream admin API.
+ * @param request Incoming request.
+ * @param context Route context.
+ * @returns Proxied response.
+ */
 export async function OPTIONS(request: NextRequest, context: RouteContext) {
   return proxy(request, context);
 }
 
+/**
+ * Proxies HEAD requests to the upstream admin API.
+ * @param request Incoming request.
+ * @param context Route context.
+ * @returns Proxied response.
+ */
 export async function HEAD(request: NextRequest, context: RouteContext) {
   return proxy(request, context);
 }

@@ -1,6 +1,6 @@
 "use client";
 
-/** File: UI/application module for the dashboard project. */
+/** File: Responsive dashboard navigation bar with Clerk-authenticated API Docs quick link. */
 
 import React, { useState } from "react";
 import Link from "next/link";
@@ -20,11 +20,18 @@ const navItems = [
 const appName = process.env.NEXT_PUBLIC_APP_NAME || "App";
 const apiDocsUrl = process.env.NEXT_PUBLIC_API_DOCS_URL || "#";
 
+// ── Dashboard Navigation
+
+/**
+ * Renders desktop and mobile dashboard navigation links.
+ * @returns Navigation header component for dashboard pages.
+ */
 export function NavBar() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const { getToken } = useAuth();
 
+  // Generates a short-lived Clerk token and opens Swagger docs in a separate tab.
   const handleApiDocsClick = async () => {
     try {
       const token = await getToken();

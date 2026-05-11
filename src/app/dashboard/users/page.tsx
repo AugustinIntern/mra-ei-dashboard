@@ -1,6 +1,6 @@
 "use client";
 
-/** File: UI/application module for the dashboard project. */
+/** File: Dashboard company management page for searching users and managing API keys. */
 
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
@@ -50,12 +50,15 @@ import { toast } from 'sonner';
 const API_BASE = '/api/admin';
 const ENDPOINT = `${API_BASE}/admin/users`;
 
+// ── Company Management
+
 /**
  * UsersPage: Manages the display and filtering of registered companies.
  * Features:
  * - Real-time client-side search.
  * - Key activity aggregation (Active vs Inactive).
  * - Automatic background data refreshing.
+ * @returns Company table UI with key lifecycle controls.
  */
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
@@ -128,7 +131,7 @@ export default function UsersPage() {
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchUsers();
+    void fetchUsers();
 
     // Refresh table data every 60 seconds
     const interval = setInterval(() => {

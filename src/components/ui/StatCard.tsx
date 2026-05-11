@@ -1,4 +1,4 @@
-/** File: UI/application module for the dashboard project. */
+/** File: Reusable KPI card used by dashboard pages to render metric tiles with optional states. */
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -12,6 +12,11 @@ interface StatCardProps extends DashboardStat {
   badge?: React.ReactNode;
 }
 
+/**
+ * Displays a metric card with loading/error/normal variants and optional adornments.
+ * @param props Metric content and rendering options.
+ * @returns Styled dashboard stat card.
+ */
 export function StatCard({
   title,
   value,

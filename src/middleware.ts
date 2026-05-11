@@ -1,8 +1,10 @@
+/** File: Global auth middleware that protects dashboard routes and redirects root/sign-in flows. */
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 
 const isProtectedRoute = createRouteMatcher(['/dashboard(.*)']);
 
+// ── Authentication and Redirect Rules
 export default clerkMiddleware(async (auth, req) => {
   const { userId } = await auth();
 

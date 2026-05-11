@@ -1,4 +1,4 @@
-/** File: UI/application module for the dashboard project. */
+/** File: Root app layout that provides global fonts, styles, Clerk context, and toast UI. */
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ClerkProvider } from '@clerk/nextjs';
@@ -23,6 +23,11 @@ export const metadata: Metadata = {
 
 import { Toaster } from "@/components/ui/sonner";
 
+/**
+ * Provides top-level HTML/body scaffolding and app-wide providers.
+ * @param children Nested route content.
+ * @returns Root application layout tree.
+ */
 export default function RootLayout({
   children,
 }: Readonly<{

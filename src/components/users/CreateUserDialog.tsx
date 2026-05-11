@@ -1,6 +1,6 @@
 "use client";
 
-/** File: UI/application module for the dashboard project. */
+/** File: Modal form for creating companies and returning first-time API credentials. */
 
 import React, { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -54,9 +54,13 @@ interface CreateUserDialogProps {
   onSuccess: () => void;
 }
 
+// ── Company Registration Modal
+
 /**
  * CreateUserDialog: A modal component for registering new companies.
  * Handles the multi-step flow of inputting credentials and displaying the generated API key.
+ * @param onSuccess Callback triggered after successful creation flow completion.
+ * @returns Dialog UI for creating a company and displaying the generated API key.
  */
 export function CreateUserDialog({ onSuccess }: CreateUserDialogProps) {
   const [open, setOpen] = useState(false);
