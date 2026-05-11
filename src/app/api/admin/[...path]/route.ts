@@ -3,6 +3,7 @@ import { auth } from '@clerk/nextjs/server';
 import { NextRequest, NextResponse } from 'next/server';
 
 const API_URL = process.env.API_URL;
+const API_INTERNAL_URL = process.env.API_INTERNAL_URL;
 const ADMIN_SECRET = process.env.ADMIN_SECRET;
 
 type RouteContext = {
@@ -22,6 +23,20 @@ async function resolvePathSegments(context: RouteContext): Promise<string> {
   return segments.join('/');
 }
 
+function normalizeBaseUrl(baseUrl: string, pathSegments: string): string {
+  const rawBase = baseUrl.replace(/\/+$/, '');
+  if (rawBase.endsWith('/admin') && pathSegments.startsWith('admin/')) {
+    return rawBase.slice(0, -'/admin'.length);
+  }
+  return rawBase;
+}
+
+function buildUpstreamCandidates(pathSegments: string): string[] {
+  const candidates = [API_INTERNAL_URL, API_URL].filter((value): value is string => Boolean(value));
+  const uniqueBases = Array.from(new Set(candidates));
+  return uniqueBases.map((base) => normalizeBaseUrl(base, pathSegments));
+}
+
 /**
  * Forwards a dashboard request to the upstream admin API after Clerk auth validation.
  * @param request Incoming request.
@@ -35,12 +50,13 @@ async function proxy(request: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (!API_URL || !ADMIN_SECRET) {
+    if ((!API_URL && !API_INTERNAL_URL) || !ADMIN_SECRET) {
       return NextResponse.json(
         {
           error: 'Server proxy is not configured',
           missing: {
-            API_URL: !API_URL,
+            API_URL: !API_URL && !API_INTERNAL_URL,
+            API_INTERNAL_URL: !API_INTERNAL_URL,
             ADMIN_SECRET: !ADMIN_SECRET,
           },
         },
@@ -52,13 +68,6 @@ async function proxy(request: NextRequest, context: RouteContext) {
     if (!pathSegments) {
       return NextResponse.json({ error: 'Missing proxy path segments' }, { status: 400 });
     }
-
-    const queryString = request.nextUrl.searchParams.toString();
-    const rawBase = API_URL.replace(/\/+$/, '');
-    const baseUrl = rawBase.endsWith('/admin') && pathSegments.startsWith('admin/')
-      ? rawBase.slice(0, -'/admin'.length)
-      : rawBase;
-    const targetUrl = `${baseUrl}/${pathSegments}${queryString ? `?${queryString}` : ''}`;
 
     const headers = new Headers(request.headers);
     headers.set('x-admin-secret', ADMIN_SECRET);
@@ -74,13 +83,29 @@ async function proxy(request: NextRequest, context: RouteContext) {
       init.body = await request.arrayBuffer();
     }
 
-    const upstream = await fetch(targetUrl, init);
-    const responseHeaders = new Headers(upstream.headers);
-    return new NextResponse(upstream.body, {
-      status: upstream.status,
-      statusText: upstream.statusText,
-      headers: responseHeaders,
-    });
+    const queryString = request.nextUrl.searchParams.toString();
+    const upstreamBases = buildUpstreamCandidates(pathSegments);
+    let lastError: string | null = null;
+
+    for (const baseUrl of upstreamBases) {
+      const targetUrl = `${baseUrl}/${pathSegments}${queryString ? `?${queryString}` : ''}`;
+      try {
+        const upstream = await fetch(targetUrl, init);
+        const responseHeaders = new Headers(upstream.headers);
+        return new NextResponse(upstream.body, {
+          status: upstream.status,
+          statusText: upstream.statusText,
+          headers: responseHeaders,
+        });
+      } catch (error: unknown) {
+        lastError = error instanceof Error ? error.message : 'Proxy request failed';
+      }
+    }
+
+    return NextResponse.json(
+      { error: 'Proxy request failed', message: lastError ?? 'Unable to reach upstream API' },
+      { status: 500 }
+    );
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Proxy request failed';
     return NextResponse.json(
