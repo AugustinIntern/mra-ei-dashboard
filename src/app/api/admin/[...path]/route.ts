@@ -37,6 +37,13 @@ function buildUpstreamCandidates(pathSegments: string): string[] {
   return uniqueBases.map((base) => normalizeBaseUrl(base, pathSegments));
 }
 
+function buildPathCandidates(pathSegments: string): string[] {
+  const normalized = pathSegments.replace(/^\/+/, '');
+  const withoutAdminPrefix = normalized.replace(/^admin\/+/, '');
+  const variants = [normalized, withoutAdminPrefix].filter(Boolean);
+  return Array.from(new Set(variants));
+}
+
 /**
  * Forwards a dashboard request to the upstream admin API after Clerk auth validation.
  * @param request Incoming request.
@@ -85,20 +92,23 @@ async function proxy(request: NextRequest, context: RouteContext) {
 
     const queryString = request.nextUrl.searchParams.toString();
     const upstreamBases = buildUpstreamCandidates(pathSegments);
+    const pathCandidates = buildPathCandidates(pathSegments);
     let lastError: string | null = null;
 
     for (const baseUrl of upstreamBases) {
-      const targetUrl = `${baseUrl}/${pathSegments}${queryString ? `?${queryString}` : ''}`;
-      try {
-        const upstream = await fetch(targetUrl, init);
-        const responseHeaders = new Headers(upstream.headers);
-        return new NextResponse(upstream.body, {
-          status: upstream.status,
-          statusText: upstream.statusText,
-          headers: responseHeaders,
-        });
-      } catch (error: unknown) {
-        lastError = error instanceof Error ? error.message : 'Proxy request failed';
+      for (const pathCandidate of pathCandidates) {
+        const targetUrl = `${baseUrl}/${pathCandidate}${queryString ? `?${queryString}` : ''}`;
+        try {
+          const upstream = await fetch(targetUrl, init);
+          const responseHeaders = new Headers(upstream.headers);
+          return new NextResponse(upstream.body, {
+            status: upstream.status,
+            statusText: upstream.statusText,
+            headers: responseHeaders,
+          });
+        } catch (error: unknown) {
+          lastError = error instanceof Error ? error.message : 'Proxy request failed';
+        }
       }
     }
 
