@@ -5,10 +5,11 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAuth } from "@clerk/nextjs";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
-import { Menu } from "lucide-react";
+import { ExternalLink, Menu } from "lucide-react";
 
 const navItems = [
   { name: "Overview", href: "/dashboard" },
@@ -17,10 +18,21 @@ const navItems = [
 ];
 
 const appName = process.env.NEXT_PUBLIC_APP_NAME || "App";
+const apiDocsUrl = process.env.NEXT_PUBLIC_API_DOCS_URL || "#";
 
 export function NavBar() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const { getToken } = useAuth();
+
+  const handleApiDocsClick = async () => {
+    try {
+      const token = await getToken();
+      window.open(`${apiDocsUrl}?token=${token}`, "_blank", "noopener,noreferrer");
+    } catch {
+      window.open(apiDocsUrl, "_blank", "noopener,noreferrer");
+    }
+  };
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -54,6 +66,13 @@ export function NavBar() {
                 {item.name}
               </Link>
             ))}
+            <button
+              onClick={handleApiDocsClick}
+              className="flex items-center gap-1 text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <span>API Docs</span>
+              <ExternalLink className="h-3.5 w-3.5" />
+            </button>
           </nav>
         </div>
 
@@ -101,6 +120,16 @@ export function NavBar() {
                   {item.name}
                 </Link>
               ))}
+              <button
+                onClick={async () => {
+                  await handleApiDocsClick();
+                  setOpen(false);
+                }}
+                className="flex items-center gap-1 text-lg text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <span>API Docs</span>
+                <ExternalLink className="h-4 w-4" />
+              </button>
             </div>
           </SheetContent>
         </Sheet>
